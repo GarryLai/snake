@@ -27,9 +27,18 @@
                 <p>Arrow Keys - Move</p>
                 <p>[P] - Pause</p>
             </div>
+            <div id="multiplayer-ui" class="multiplayer-ui">
+                <p>Your ID: <span id="my-id">Loading...</span></p>
+                <div>
+                    <input type="text" id="target-id" placeholder="Enter target ID" />
+                    <button id="connect-btn">Connect</button>
+                    <div id="conn-status"></div>
+                </div>
+            </div>
             <h2 class="blink">PRESS ENTER TO START</h2>
         </div>
     </div>
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

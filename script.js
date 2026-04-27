@@ -204,6 +204,8 @@ function drawGame() {
     drawFood();
     moveSnake();
     drawSnake();
+    drawOtherPlayers();
+    checkPlayerCollisions();
 }
 
 function drawBorder() {
@@ -350,6 +352,9 @@ function placeFood() {
             }
         }
     }
+    if (isMultiplayer && conn) {
+        conn.send({ type: 'foodSync', food: food });
+    }
 }
 
 function drawFood() {
@@ -380,3 +385,108 @@ resizeCanvas();
 
 clearCanvas();
 drawSnake();
+let myPeer;
+let conn = null;
+let isMultiplayer = false;
+let playerID = "";
+let players = {};
+
+function initPeer() {
+    myPeer = new Peer();
+    
+    myPeer.on('open', function(id) {
+        playerID = id;
+        document.getElementById('my-id').textContent = id;
+    });
+
+    myPeer.on('connection', function(connection) {
+        setupConnection(connection);
+        document.getElementById('conn-status').textContent = 'Connected as Host!';
+    });
+}
+
+document.getElementById('connect-btn').addEventListener('click', () => {
+    const targetId = document.getElementById('target-id').value;
+    if (!targetId) return;
+    const connection = myPeer.connect(targetId);
+    setupConnection(connection);
+    document.getElementById('conn-status').textContent = 'Connected as Client!';
+});
+
+function setupConnection(connection) {
+    conn = connection;
+    isMultiplayer = true;
+    
+    conn.on('data', function(data) {
+        if(data.type === 'gameState') {
+            players[data.id] = data.snake;
+        } else if (data.type === 'youDied') {
+            die();
+        } else if (data.type === 'foodSync') {
+            food = data.food;
+        }
+    });
+
+    setInterval(() => {
+        if (isGameRunning && isMultiplayer) {
+            conn.send({ type: 'gameState', id: playerID, snake: snake });
+            // Host sends food
+            if (myPeer.connections && Object.keys(myPeer.connections).length > 0 && playerID < Object.keys(myPeer.connections)[0]) {
+                 // Simple host resolution or just send food if we place it
+            }
+        }
+    }, 100); 
+}
+
+initPeer();
+function drawOtherPlayers() {
+    if (!isMultiplayer) return;
+    for (const [id, otherSnake] of Object.entries(players)) {
+        if (id === playerID || !otherSnake || otherSnake.length === 0) continue;
+        
+        // Draw other snake differently (e.g. green or purple)
+        otherSnake.forEach((part, index) => {
+            if (index === 0) {
+                ctx.fillStyle = "#00cc00"; // Green head
+                ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize, gridSize);
+                ctx.fillStyle = "#000"; 
+                ctx.fillRect(part.x * gridSize + 4, part.y * gridSize + 4, 2, 2); 
+                ctx.fillRect(part.x * gridSize + 14, part.y * gridSize + 4, 2, 2); 
+            } else {
+                ctx.fillStyle = "#44ff44"; // Green body
+                let px = part.x * gridSize;
+                let py = part.y * gridSize;
+                ctx.fillRect(px + 8, py + 2, 4, 16);
+                ctx.fillRect(px + 2, py + 8, 16, 4);
+            }
+        });
+    }
+}
+
+function checkPlayerCollisions() {
+    if (!isMultiplayer || !snake[0]) return;
+
+    let head = snake[0];
+
+    for (const [otherId, otherSnake] of Object.entries(players)) {
+        if (otherId === playerID) continue;
+
+        for (let i = 0; i < otherSnake.length; i++) {
+            let part = otherSnake[i];
+            if (head.x === part.x && head.y === part.y) {
+                if (snake.length > otherSnake.length) {
+                    for(let j = 0; j < otherSnake.length; j++) {
+                        snake.push({...snake[snake.length - 1]}); 
+                    }
+                    score += otherSnake.length * 10;
+                    scoreElement.textContent = score;
+                    if (conn) conn.send({ type: 'youDied' });
+                    // Remove them locally until they respawn
+                    players[otherId] = [];
+                } else {
+                    die();
+                }
+            }
+        }
+    }
+}

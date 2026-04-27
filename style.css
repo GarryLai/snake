@@ -92,3 +92,29 @@ canvas {
 @keyframes blinker {
     50% { opacity: 0; }
 }
+
+.multiplayer-ui {
+    margin-bottom: 20px;
+    text-align: center;
+    color: #0f0;
+}
+.multiplayer-ui input {
+    background: #000;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 5px;
+    font-family: inherit;
+}
+.multiplayer-ui button {
+    background: #0f0;
+    color: #000;
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+}
+#conn-status {
+    margin-top: 5px;
+    font-size: 14px;
+}
