@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SNAKE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="top-bar">
+        <span>Level: <span id="level">1</span></span>
+        <span>Punkte: <span id="score">0</span></span>
+        <span>Leben: <span id="lives">3</span></span>
+    </div>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="overlay" class="overlay show">
+            <pre class="ascii-title">
+  ____  _   _    _    _  _______
+ / ___|| \ | |  / \  | |/ / ____|
+ \___ \|  \| | / _ \ | ' /|  _|
+  ___) | |\  |/ ___ \| . \| |___
+ |____/|_| \_/_/   \_\_|\_\_____|
+            </pre>
+            <div class="instructions">
+                <p>CONTROLS:</p>
+                <p>Arrow Keys - Move</p>
+                <p>[P] - Pause</p>
+            </div>
+            <h2 class="blink">PRESS ENTER TO START</h2>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
