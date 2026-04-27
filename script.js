@@ -93,7 +93,7 @@ function generateDNASequenceForLevel(lv) {
 
 function updateDNAUI() {
     const endLabel = targetDNAEnds === "5'" ? "3'" : "5'";
-    const displayedSeq = targetDNASequence.slice(0, snake.length + 1);
+    const displayedSeq = targetDNASequence;
     document.getElementById("dna-sequence").textContent = 
         `${targetDNAEnds} - ${displayedSeq.join(' - ')} - ${endLabel}`;
 }
