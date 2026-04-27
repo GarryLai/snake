@@ -8,15 +8,21 @@ let gridSize = 20;
 let tileCountX = 0;
 let tileCountY = 0;
 
+let targetDNASequence = [];
+let snakeHeadEnds = "3'";
+let targetDNAEnds = "5'";
+const COMPLEMENTS = { 'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C' };
+const BASES = ['A', 'T', 'C', 'G'];
+let foods = [];
+
 let snake = [];
-let food = { x: 15, y: 15 };
 let dx = 0;
 let dy = 0;
 let score = 0;
 let level = 1;
 let lives = 3;
 let gameLoop;
-let speed = 150;
+let speed = 250;
 let changingDirection = false;
 let isPaused = false;
 let isGameRunning = false;
@@ -54,7 +60,7 @@ function initGame() {
     score = 0;
     level = 1;
     lives = 3;
-    speed = 150;
+    speed = 250; // Slower initial speed
     isPaused = false;
     isGameRunning = true;
     extraLifeMsgTimer = 0;
@@ -62,12 +68,34 @@ function initGame() {
     levelElement.textContent = level;
     livesElement.textContent = lives;
     
+    // DNA Mechanics init
+    snakeHeadEnds = Math.random() < 0.5 ? "3'" : "5'";
+    targetDNAEnds = snakeHeadEnds === "3'" ? "5'" : "3'";
+    targetDNASequence = generateDNASequenceForLevel(level);
+    updateDNAUI();
+
     document.getElementById("overlay").classList.remove("show");
     
     placeFood();
     
     if(gameLoop) clearInterval(gameLoop);
     gameLoop = setInterval(drawGame, speed);
+}
+
+function generateDNASequenceForLevel(lv) {
+    const length = lv * 2 + 1; // 第一關3個，第二關5個...
+    let seq = [];
+    for (let i = 0; i < length; i++) {
+        seq.push(BASES[Math.floor(Math.random() * BASES.length)]);
+    }
+    return seq;
+}
+
+function updateDNAUI() {
+    const endLabel = targetDNAEnds === "5'" ? "3'" : "5'";
+    const displayedSeq = targetDNASequence.slice(0, snake.length + 1);
+    document.getElementById("dna-sequence").textContent = 
+        `${targetDNAEnds} - ${displayedSeq.join(' - ')} - ${endLabel}`;
 }
 
 function die() {
@@ -80,6 +108,13 @@ function die() {
         snake = [{ x: Math.floor(tileCountX / 2), y: Math.floor(tileCountY / 2) }];
         dx = 0;
         dy = 0;
+        
+        // Reset DNA sequence as well
+        snakeHeadEnds = Math.random() < 0.5 ? "3'" : "5'";
+        targetDNAEnds = snakeHeadEnds === "3'" ? "5'" : "3'";
+        targetDNASequence = generateDNASequenceForLevel(level);
+        updateDNAUI();
+        placeFood();
     }
 }
 
@@ -253,29 +288,22 @@ function drawSnakePart(snakePart, index) {
         ctx.fillStyle = "#cc0000"; // 紅色
         ctx.fillRect(snakePart.x * gridSize, snakePart.y * gridSize, gridSize, gridSize);
         
-        ctx.fillStyle = "#000"; // 黑色眼睛和嘴巴
-        ctx.fillRect(snakePart.x * gridSize + 4, snakePart.y * gridSize + 4, 2, 2); // 左眼
-        ctx.fillRect(snakePart.x * gridSize + 14, snakePart.y * gridSize + 4, 2, 2); // 右眼
-        // 嘴巴 (簡單的 L 形或平線)
-        ctx.fillRect(snakePart.x * gridSize + 6, snakePart.y * gridSize + 12, 8, 2);
-        ctx.fillRect(snakePart.x * gridSize + 4, snakePart.y * gridSize + 10, 2, 2);
-        ctx.fillRect(snakePart.x * gridSize + 14, snakePart.y * gridSize + 10, 2, 2);
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px 'Courier New', Courier, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(snakeHeadEnds, snakePart.x * gridSize + gridSize/2, snakePart.y * gridSize + gridSize/2 + 4);
     } else {
         // 身體：藍色星形 / 十字形
         ctx.fillStyle = "#4444ff"; // 藍色
-        let px = snakePart.x * gridSize;
-        let py = snakePart.y * gridSize;
+        ctx.fillRect(snakePart.x * gridSize, snakePart.y * gridSize, gridSize, gridSize);
         
-        // 畫十字
-        ctx.fillRect(px + 8, py + 2, 4, 16);
-        ctx.fillRect(px + 2, py + 8, 16, 4);
-        
-        // 四個角落的小點
-        ctx.fillStyle = "#8888ff";
-        ctx.fillRect(px + 4, py + 4, 2, 2);
-        ctx.fillRect(px + 14, py + 4, 2, 2);
-        ctx.fillRect(px + 4, py + 14, 2, 2);
-        ctx.fillRect(px + 14, py + 14, 2, 2);
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px 'Courier New', Courier, monospace";
+        ctx.textAlign = "center";
+        const complementBase = COMPLEMENTS[targetDNASequence[snake.length - 1 - index]];
+        if(complementBase) {
+            ctx.fillText(complementBase, snakePart.x * gridSize + gridSize/2, snakePart.y * gridSize + gridSize/2 + 4);
+        }
     }
 }
 
@@ -292,30 +320,61 @@ function moveSnake() {
     const head = { x: nextX, y: nextY };
     snake.unshift(head);
 
-    if (head.x === food.x && head.y === food.y) {
-        score += 15;
-        scoreElement.textContent = score;
-        
-        // 簡單的過關機制，模擬關卡提速
-        if (score % 150 === 0) {
-            level++;
-            levelElement.textContent = level;
-            
-            // 展示 Extra Life 特效
-            if (level % 3 === 0) {
-                lives++;
-                livesElement.textContent = lives;
-                extraLifeMsgTimer = 30; // 顯示 30 幀
-            }
-            
-            if (speed > 50) {
-                clearInterval(gameLoop);
-                speed -= 10;
-                gameLoop = setInterval(drawGame, speed);
-            }
+    let eatenFood = null;
+    for (let f of foods) {
+        if (head.x === f.x && head.y === f.y) {
+            eatenFood = f;
+            break;
         }
+    }
+
+    if (eatenFood) {
+        const requiredTargetBase = targetDNASequence[snake.length - 2]; // length is already +1 after unshift, so new head plus bodies
+        const requiredEatenBase = COMPLEMENTS[requiredTargetBase];
         
-        placeFood();
+        if (eatenFood.base === requiredEatenBase) {
+            // 吃對了
+            score += 15;
+            scoreElement.textContent = score;
+            
+            updateDNAUI();
+
+            // 只要把題目接完就能晉級
+            if (snake.length - 1 === targetDNASequence.length) {
+                level++;
+                levelElement.textContent = level;
+                
+                // 展示 Extra Life 特效
+                if (level % 3 === 0) {
+                    lives++;
+                    livesElement.textContent = lives;
+                    extraLifeMsgTimer = 30; // 顯示 30 幀
+                }
+                
+                if (speed > 50) {
+                    clearInterval(gameLoop);
+                    speed -= 10;
+                    gameLoop = setInterval(drawGame, speed);
+                }
+
+                // Reset snake for new level
+                snake = [{ x: Math.floor(tileCountX / 2), y: Math.floor(tileCountY / 2) }];
+                dx = 0; // 可以暫停讓玩家準備
+                dy = 0;
+                
+                // 初始化下一關 DNA
+                snakeHeadEnds = Math.random() < 0.5 ? "3'" : "5'";
+                targetDNAEnds = snakeHeadEnds === "3'" ? "5'" : "3'";
+                targetDNASequence = generateDNASequenceForLevel(level);
+                updateDNAUI();
+            }
+            
+            placeFood();
+        } else {
+            // 吃錯鹼基
+            snake.pop();
+            die();
+        }
     } else {
         snake.pop();
     }
@@ -327,39 +386,68 @@ function placeFood() {
         padding = 2; // 低等級時內縮兩格，避免出現在牆邊和牆角
     }
     
-    let valid = false;
-    while (!valid) {
-        food.x = padding + Math.floor(Math.random() * (tileCountX - 2 * padding));
-        food.y = padding + Math.floor(Math.random() * (tileCountY - 2 * padding));
+    foods = [];
+    const basesToPlace = [...BASES];
+    
+    // 將 A, T, C, G 打亂或直接依序放置
+    for (let base of basesToPlace) {
+        let valid = false;
+        let newX, newY;
+        while (!valid) {
+            newX = padding + Math.floor(Math.random() * (tileCountX - 2 * padding));
+            newY = padding + Math.floor(Math.random() * (tileCountY - 2 * padding));
 
-        valid = true;
+            valid = true;
 
-        // 稍微提昇等級後(level 3~5)可以出現在牆邊，但還不能出現在牆角
-        if (level >= 3 && level < 6) {
-            let isCorner = (food.x === 1 || food.x === tileCountX - 2) && 
-                           (food.y === 1 || food.y === tileCountY - 2);
-            if (isCorner) {
-                valid = false;
-                continue;
+            // 稍微提昇等級後(level 3~5)可以出現在牆邊，但還不能出現在牆角
+            if (level >= 3 && level < 6) {
+                let isCorner = (newX === 1 || newX === tileCountX - 2) && 
+                               (newY === 1 || newY === tileCountY - 2);
+                if (isCorner) {
+                    valid = false;
+                    continue;
+                }
+            }
+
+            // 檢查與蛇身是否重疊
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === newX && snake[i].y === newY) {
+                    valid = false;
+                    break;
+                }
+            }
+            // 檢查與其他食物是否重疊
+            for (let f of foods) {
+                if (f.x === newX && f.y === newY) {
+                    valid = false;
+                    break;
+                }
             }
         }
-
-        // 檢查與蛇身是否重疊
-        for (let i = 0; i < snake.length; i++) {
-            if (snake[i].x === food.x && snake[i].y === food.y) {
-                valid = false;
-                break;
-            }
-        }
+        foods.push({ x: newX, y: newY, base: base });
     }
+    
     if (isMultiplayer && conn) {
-        conn.send({ type: 'foodSync', food: food });
+        conn.send({ type: 'foodSync', foods: foods });
     }
 }
 
 function drawFood() {
-    ctx.fillStyle = "#ff00ff"; // 洋紅色
-    ctx.fillRect(food.x * gridSize + 4, food.y * gridSize + 4, gridSize - 8, gridSize - 8);
+    for (let f of foods) {
+        // 設定各自的顏色 A, T, C, G
+        if (f.base === 'A') ctx.fillStyle = "#ff5555";
+        else if (f.base === 'T') ctx.fillStyle = "#55ff55";
+        else if (f.base === 'C') ctx.fillStyle = "#5555ff";
+        else if (f.base === 'G') ctx.fillStyle = "#ffff55";
+        else ctx.fillStyle = "#ff00ff";
+
+        ctx.fillRect(f.x * gridSize + 2, f.y * gridSize + 2, gridSize - 4, gridSize - 4);
+        
+        ctx.fillStyle = "#000";
+        ctx.font = "bold 14px 'Courier New', Courier, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(f.base, f.x * gridSize + gridSize/2, f.y * gridSize + gridSize/2 + 5);
+    }
 }
 
 function hasGameEnded() {
